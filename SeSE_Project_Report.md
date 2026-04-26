@@ -43,7 +43,31 @@ For long-form generation, SeSE builds a **bipartite** claim–response graph G_c
 - `SeSELongForm`: takes an entailment matrix between R responses and C claims, builds a bipartite graph, computes an encoding tree, and returns per-claim SeSE scores plus a label based on support.
 
 The notebook includes a training loop (`SeSETrainer`) that treats the SeSE score as a logit and uses `BCEWithLogitsLoss` to fine-tune parameters on labeled short-form examples. In the specific “fixed thresholds” configuration, only a subset of parameters are trainable.
+### Enhanced project system: dual-path decoding architecture
 
+The project extends the base SeSE framework with a **dual-path architecture** that systematically compares two complementary decoding and scaling strategies for uncertainty quantification:
+
+**System pipeline architecture:**
+
+1. **Input Stage:** Semantic responses from the LLM are fed into the pipeline.
+
+2. **Temperature Scaling Stage σ(temp):** Input responses are normalized using temperature-adjusted scaling, controlling the confidence and concentration of the semantic space representation. Temperature acts as a hyperparameter controlling how "sharp" or "smooth" the uncertainty estimates become.
+
+3. **Dual Decoding Branches:**
+   - **Path A – Softmax Decoding (SySca):** Applies learned softmax-based normalization across semantic clusters, producing continuous probabilistic confidence scores. This path emphasizes smooth probability distributions and captures the full entropy of the semantic space.
+   - **Path B – Fixed Scaling (SySla with λ parameter):** Applies fixed-threshold scaling to produce more discrete, threshold-driven decisions. This path emphasizes deterministic decision boundaries and robustness to small perturbations.
+
+4. **Adaptive Decision Selection:** A decision module evaluates both paths' outputs and selects which decoding strategy or combination of strategies to prioritize based on:
+   - Response confidence distribution characteristics
+   - Entropy magnitude and structural complexity
+   - Training signals from labeled data
+
+5. **Multi-Stage Decoding:** Downstream decode operations apply claim-level or response-level classifiers to produce final hallucination/factuality decisions.
+
+**Rationale for dual-path design:**
+- **Probabilistic vs. deterministic trade-off:** Softmax decoding captures nuanced uncertainty gradients; fixed scaling provides interpretable, stable thresholds.
+- **Hyperparameter exploration:** Allows systematic investigation of whether temperature scaling or fixed scaling parameters improve SeSE discrimination.
+- **Hybrid robustness:** Comparing both approaches identifies which strategy generalizes better across different response types and hallucination patterns.
 ## Key technical components
 
 ### 1) Directed semantic graph construction (paper)
